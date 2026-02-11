@@ -1,16 +1,26 @@
 from flask import Flask, jsonify, request
 
-app = Flask(__name__)
+app = Flask(name)
+
 
 class Job:
-    def __init__(self, job_id, name, hours):
+    def init(self, job_id, name, hours):
         self.job_id = job_id
         self.name = name
         self.hours = hours
-        self.status = "PENDING"
+        self.status = "PENDING"  
+
+    def approve(self):
+        self.status = "APPROVED"
 
     def run(self):
+        if self.status != "APPROVED":
+            return False
+        self.status = "RUNNING"
+        
         self.status = "COMPLETED"
+        return True
+
 
 
 jobs = []
@@ -20,6 +30,7 @@ job_counter = 1
 @app.route("/")
 def home():
     return "Service as GPU - Simulation"
+
 
 
 @app.route("/jobs", methods=["POST"])
@@ -43,6 +54,7 @@ def create_job():
     })
 
 
+
 @app.route("/jobs", methods=["GET"])
 def list_jobs():
     return jsonify([
@@ -56,11 +68,30 @@ def list_jobs():
     ])
 
 
+
+@app.route("/jobs/<int:job_id>/approve", methods=["POST"])
+def approve_job(job_id):
+    for job in jobs:
+        if job.job_id == job_id:
+            if job.status != "PENDING":
+                return jsonify({"error": "Job already approved or executed"}), 400
+            job.approve()
+            return jsonify({
+                "message": "Job approved",
+                "status": job.status
+            })
+    return jsonify({"error": "Job not found"}), 404
+
+
+
 @app.route("/jobs/<int:job_id>/run", methods=["POST"])
 def run_job(job_id):
     for job in jobs:
         if job.job_id == job_id:
-            job.run()
+            result = job.run()
+            if not result:
+                return jsonify({"error": "Job not approved"}), 400
+
             return jsonify({
                 "message": "Job executed",
                 "status": job.status
@@ -69,5 +100,6 @@ def run_job(job_id):
     return jsonify({"error": "Job not found"}), 404
 
 
-if __name__ == "__main__":
+if name == "main":
     app.run(debug=True)
+
